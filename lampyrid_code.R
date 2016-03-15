@@ -13,6 +13,7 @@ lampyrid$year<-year(lampyrid$newdate)
 #because you don't have to deal with day-of-month numbers starting over 
 #in the middle of a phenological event.
 lampyrid$DOY<-yday(lampyrid$newdate)
+lampyrid$week<-week(lampyrid$newdate)
 
 #let's look for the data problems we found we used OpenRefine and see if
 #we can impliment our cleaning operations here- that way we have a complete
@@ -62,7 +63,7 @@ weather<-read.table(file="http://lter.kbs.msu.edu/datatables/7.csv",
 #it's convenient living where we do! 
 
 weather$DOY<-yday(weather$date)
-
+weather$week<-week(weather$date)
 #do a few simple plots to make sure the data makes sense -this is
 #a good way to check that the importation was sucessful
 
@@ -263,4 +264,34 @@ plot(weather$DOY, weather$dd.accum)
 
 #so, now we have two datasets that both have information we need in them.
 #let's put it all together in one frame
-lampyrid.weather<-merge(lampyrid, weather, by=c("year", "DOY"), all.x=TRUE)
+lampyrid.weather<-merge(lampyrid, weather, by=c("year", "DOY", "week"), all.x=TRUE)
+#DOY
+library(ggplot2)
+lampyrid.doy<-ggplot(lampyrid.weather, aes(DOY, ADULTS, color=as.factor(year)))+
+  geom_point()
+lampyrid.doy
+#WEEK
+lampyrid.week<-ggplot(lampyrid.weather, aes(week, ADULTS, color=as.factor(year)))+
+  geom_point()
+lampyrid.week
+
+#were interested in looking at more general treds. well need to 
+library(plyr)
+captures.by.year<-ddply(lampyrid.weather, c("year"), summarise,
+                        total=sum(ADULTS), traps=length(ADULTS), avg=sum(ADULTS/length(ADULTS)))
+
+captures.by.week.year<-ddply(lampyrid.weather, c("year", "week"), summarise,
+  total=sum(ADULTS), traps=length(ADULTS), avg=sum(ADULTS/length(ADULTS)),
+                                            ddacc=max(dd.accum))
+
+lampyrid.summary.week<-ggplot(captures.by.week.year, aes(week, avg, color=factor(year)))+
+  geom_point()+geom_smooth(se=FALSE)
+lampyrid.summary.week
+
+lampyrid.summary.ddacc<-ggplot(captures.by.week.year, aes(ddacc, avg, color=factor(year)))+
+  geom_point()+geom_smooth(se=FALSE)
+lampyrid.summary.ddacc
+
+library(ggplot2)
+
+View(captures.by.year)
